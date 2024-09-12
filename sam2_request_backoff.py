@@ -62,12 +62,12 @@ def detect_masks(
     """
     image_buffer = io.BytesIO()
     image_pil.save(image_buffer, format="JPEG")
-    image_buffer.seek(0)  # Move to the start of the file-like object
+    image_buffer.seek(0)  # Move to the start of the file-like object.
 
-    # Define the API endpoint
+    # Define the API endpoint.
     url = "https://dream-gateway.livepeer.cloud/segment-anything-2"
 
-    # Prepare the payload for request
+    # Prepare the payload for the request.
     headers = {
         "Authorization": "Bearer 50D28E87-3902-49EC-8DF0-0EA5A93EB62F",
     }
@@ -131,5 +131,5 @@ async def main():
         print("Scores:", scores)
 
 
-# Run the async function
+# Run the async function.
 asyncio.run(main())
