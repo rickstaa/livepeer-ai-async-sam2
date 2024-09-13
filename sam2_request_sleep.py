@@ -126,20 +126,27 @@ async def detect_masks_sam2_async(
     if not (len(image_pils) == len(point_coords) == len(bbox_xyxys)):
         raise ValueError("Length of inputs must be the same!")
 
+    results = []
     with ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE) as executor:
         # Initialize the event loop
         loop = asyncio.get_event_loop()
-        tasks = [
-            loop.run_in_executor(
-                executor, detect_masks, *(image_pil, point_coord, bbox_xyxy, session)
-            )
-            for image_pil, point_coord, bbox_xyxy in zip(
-                image_pils, point_coords, bbox_xyxys
-            )
-        ]
+        sleep_duration = 60 / len(
+            image_pils
+        )  # Calculate sleep duration to spread requests over a minute.
+        for i, (image_pil, point_coord, bbox_xyxy) in enumerate(
+            zip(image_pils, point_coords, bbox_xyxys)
+        ):
+            # Introduce a varying delay before each request
+            await asyncio.sleep(
+                sleep_duration * (i % THREAD_POOL_SIZE)
+            )  # Adjust the multiplier as needed
 
-        results = await asyncio.gather(*tasks)
-        return results
+            task = loop.run_in_executor(
+                executor, detect_masks, image_pil, point_coord, bbox_xyxy, session
+            )
+            results.append(task)
+
+    return await asyncio.gather(*results)
 
 
 def load_bounding_boxes(pkl_file_path):
