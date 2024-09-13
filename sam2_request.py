@@ -19,6 +19,7 @@ SAM2APIOutput: TypeAlias = tuple[
 # GATEWAY_URL = "https://dream-gateway.livepeer.cloud"
 GATEWAY_URL = "http://0.0.0.0:8935"
 THREAD_POOL_SIZE = 10
+PRINT_MASKS = False
 
 
 def parse_args():
@@ -184,10 +185,16 @@ async def main():
 
     # Run the detection.
     results = await detect_masks_sam2_async(image_pils, point_coords, bbox_xyxys)
-    for masks, logits, scores in results:
-        print("Masks:", masks)
-        print("Logits:", logits)
-        print("Scores:", scores)
+    if PRINT_MASKS:
+        for masks, logits, scores in results:
+            print("Masks:", masks)
+            print("Logits:", logits)
+            print("Scores:", scores)
+
+    # Print some statistics.
+    success_count = sum(1 for masks, logits, scores in results if masks is not None and logits is not None and scores is not None)
+    print(f"Total images processed: {len(results)}")
+    print(f"Successful detections: {success_count}")
 
 
 # Run the async function.
