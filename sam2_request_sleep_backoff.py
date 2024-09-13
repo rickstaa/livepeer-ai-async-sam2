@@ -21,6 +21,7 @@ SAM2APIOutput: TypeAlias = tuple[
 GATEWAY_URL = "http://0.0.0.0:8935"
 THREAD_POOL_SIZE = 10
 PRINT_MASKS = False
+SHOW_RETRY_LOGS = False
 
 # Counter for requests
 request_count = 0
@@ -42,11 +43,18 @@ def parse_args():
         default=THREAD_POOL_SIZE,
         help="Size of the thread pool",
     )
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="Number of times to repeat the 100 example images.",
+    )
     return parser.parse_args()
 
 
 args = parse_args()
 THREAD_POOL_SIZE = args.thread_pool_size
+JOB_MULTIPLIER = args.repeat
 
 # Configure retries with backoff strategy
 retry_strategy = Retry(
@@ -129,7 +137,8 @@ def detect_masks(
         return masks, logits, scores
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        if SHOW_RETRY_LOGS:
+            print(f"An error occurred: {e}")
         # Return a default value or None to indicate failure
         return None, None, None
 
@@ -218,6 +227,11 @@ async def main():
     # Load point coords and bounding boxes from the pickle file.
     point_coords = load_point_coords("example_data/point_coords_snippet.pkl")
     bbox_xyxys = load_bounding_boxes("example_data/bbox_snippet.pkl")
+
+    # Simulate more images by repeating the lists
+    image_pils *= JOB_MULTIPLIER
+    point_coords *= JOB_MULTIPLIER
+    bbox_xyxys *= JOB_MULTIPLIER
 
     # Run the detection.
     results = await detect_masks_sam2_async(image_pils, point_coords, bbox_xyxys)
