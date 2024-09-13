@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import io
 import json
@@ -10,7 +11,6 @@ from typing import TypeAlias
 import numpy as np
 import numpy.typing as npt
 import requests
-import argparse
 from PIL import Image
 
 SAM2APIOutput: TypeAlias = tuple[
@@ -20,6 +20,9 @@ SAM2APIOutput: TypeAlias = tuple[
 GATEWAY_URL = "http://0.0.0.0:8935"
 THREAD_POOL_SIZE = 10
 PRINT_MASKS = False
+
+# Counter for requests
+request_count = 0
 
 
 def parse_args():
@@ -61,6 +64,9 @@ def detect_masks(
     """
     Detects faces in an image using Amazon Rekognition.
     """
+    global request_count
+    request_count += 1
+
     try:
         image_buffer = io.BytesIO()
         image_pil.save(image_buffer, format="JPEG")
@@ -171,6 +177,17 @@ def load_point_coords(pkl_file_path):
         return pickle.load(file)
 
 
+async def print_request_count():
+    """
+    Periodically print the number of requests made per minute.
+    """
+    global request_count
+    while True:
+        await asyncio.sleep(60)
+        print(f"Requests per minute: {request_count}")
+        request_count = 0
+
+
 async def main():
     """
     Run object segmentation using Livepeer AI SAM2 pipeline synchronously.
@@ -192,10 +209,16 @@ async def main():
             print("Scores:", scores)
 
     # Print some statistics.
-    success_count = sum(1 for masks, logits, scores in results if masks is not None and logits is not None and scores is not None)
+    success_count = sum(
+        1
+        for masks, logits, scores in results
+        if masks is not None and logits is not None and scores is not None
+    )
     print(f"Total images processed: {len(results)}")
     print(f"Successful detections: {success_count}")
 
 
 # Run the async function.
-asyncio.run(main())
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(asyncio.gather(main(), print_request_count()))
