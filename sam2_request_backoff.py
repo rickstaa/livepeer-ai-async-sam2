@@ -17,8 +17,6 @@ from urllib3.util.retry import Retry
 SAM2APIOutput: TypeAlias = tuple[
     npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]
 ]
-# GATEWAY_URL = "https://dream-gateway.livepeer.cloud"
-GATEWAY_URL = "http://0.0.0.0:8935"
 THREAD_POOL_SIZE = 10
 PRINT_MASKS = False
 SHOW_RETRY_LOGS = False
@@ -49,12 +47,19 @@ def parse_args():
         default=1,
         help="Number of times to repeat the 100 example images.",
     )
+    parser.add_argument(
+        "--gateway_url",
+        type=str,
+        default="https://dream-gateway.livepeer.cloud",
+        help="URL of the gateway to use for requests.",
+    )
     return parser.parse_args()
 
 
 args = parse_args()
 THREAD_POOL_SIZE = args.thread_pool_size
 JOB_MULTIPLIER = args.repeat
+GATEWAY_URL = args.gateway_url
 
 # Configure retries with backoff strategy
 retry_strategy = Retry(
