@@ -73,9 +73,6 @@ def detect_masks(
     """
     Detects faces in an image using Amazon Rekognition.
     """
-    global request_count
-    request_count += 1
-
     try:
         image_buffer = io.BytesIO()
         image_pil.save(image_buffer, format="JPEG")
@@ -122,6 +119,9 @@ def detect_masks(
         masks = np.array(json.loads(response_data["masks"]))
         logits = np.array(json.loads(response_data["logits"]))
         scores = np.array(json.loads(response_data["scores"]))
+
+        global request_count
+        request_count += 1
 
         return masks, logits, scores
 
@@ -193,7 +193,7 @@ async def print_request_count():
     global request_count
     while True:
         await asyncio.sleep(60)
-        print(f"Requests per minute: {request_count}")
+        print(f"Successful requests per minute: {request_count}")
         request_count = 0
 
 
