@@ -25,6 +25,9 @@ PRINT_MASKS = False
 # Counter for requests
 request_count = 0
 
+# Event to signal completion
+completion_event = asyncio.Event()
+
 
 def parse_args():
     """
@@ -191,7 +194,7 @@ async def print_request_count():
     Periodically print the number of requests made per minute.
     """
     global request_count
-    while True:
+    while not completion_event.is_set():
         await asyncio.sleep(60)
         print(f"Successful requests per minute: {request_count}")
         request_count = 0
@@ -218,9 +221,16 @@ async def main():
             print("Scores:", scores)
 
     # Print some statistics.
-    success_count = sum(1 for masks, logits, scores in results if masks is not None and logits is not None and scores is not None)
+    success_count = sum(
+        1
+        for masks, logits, scores in results
+        if masks is not None and logits is not None and scores is not None
+    )
     print(f"Total images processed: {len(results)}")
     print(f"Successful detections: {success_count}")
+
+    # Signal completion
+    completion_event.set()
 
 
 # Run the async function.

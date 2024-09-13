@@ -25,6 +25,9 @@ PRINT_MASKS = False
 # Counter for requests
 request_count = 0
 
+# Event to signal completion
+completion_event = asyncio.Event()
+
 
 def parse_args():
     """
@@ -50,7 +53,7 @@ retry_strategy = Retry(
     total=3,
     status_forcelist=[503],
     allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
-    backoff_factor=1  # This will wait 1s, 2s, 4s between retries
+    backoff_factor=1,  # This will wait 1s, 2s, 4s between retries
 )
 
 # Initialize session with backoff retry strategy.
@@ -146,12 +149,16 @@ async def detect_masks_sam2_async(
     with ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE) as executor:
         # Initialize the event loop
         loop = asyncio.get_event_loop()
-        sleep_duration = 60 / len(image_pils)  # Calculate sleep duration to spread requests over a minute.
+        sleep_duration = 60 / len(
+            image_pils
+        )  # Calculate sleep duration to spread requests over a minute.
         for i, (image_pil, point_coord, bbox_xyxy) in enumerate(
             zip(image_pils, point_coords, bbox_xyxys)
         ):
             # Introduce a varying delay before each request
-            await asyncio.sleep(sleep_duration * (i % THREAD_POOL_SIZE))  # Adjust the multiplier as needed
+            await asyncio.sleep(
+                sleep_duration * (i % THREAD_POOL_SIZE)
+            )  # Adjust the multiplier as needed
 
             task = loop.run_in_executor(
                 executor, detect_masks, image_pil, point_coord, bbox_xyxy, session
@@ -194,7 +201,7 @@ async def print_request_count():
     Periodically print the number of requests made per minute.
     """
     global request_count
-    while True:
+    while not completion_event.is_set():
         await asyncio.sleep(60)
         print(f"Successful requests per minute: {request_count}")
         request_count = 0
@@ -221,9 +228,16 @@ async def main():
             print("Scores:", scores)
 
     # Print some statistics.
-    success_count = sum(1 for masks, logits, scores in results if masks is not None and logits is not None and scores is not None)
+    success_count = sum(
+        1
+        for masks, logits, scores in results
+        if masks is not None and logits is not None and scores is not None
+    )
     print(f"Total images processed: {len(results)}")
     print(f"Successful detections: {success_count}")
+
+    # Signal completion
+    completion_event.set()
 
 
 # Run the async function.
